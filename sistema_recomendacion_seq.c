@@ -1,0 +1,142 @@
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define NUM_USERS 10
+#define My NUM_USERS
+#define NUM_MOVIES 10
+
+// ruby fill logs with random numbers
+// 10.times { 10.times { print "#{rand.rand 5} " } ; puts "" }
+
+int matrix_user_log[NUM_USERS][NUM_MOVIES];
+double matrix_corr[My][My];
+
+
+void print_matrix()
+{
+  int i;
+  int j;
+  for ( i = 0; i < NUM_USERS; ++i )
+  {
+    for ( j = 0; j < NUM_MOVIES; ++j )
+    {
+      printf("%d ", matrix_user_log[i][j]);
+    }
+    printf("\n");
+  }
+}
+
+void print_matrix_corr()
+{
+  int i;
+  int j;
+  for ( i = 0; i < NUM_USERS; ++i )
+  {
+    for ( j = 0; j < NUM_USERS; ++j )
+    {
+      printf("%f ", matrix_corr[i][j]);
+    }
+    printf("\n");
+  }
+}
+
+int vector_sum(int vector [NUM_MOVIES])
+{
+  int sum = 0;
+  int i;
+  for ( i = 0; i < NUM_MOVIES; ++i )
+  {
+    sum += vector[i];
+  }
+  return sum;
+}
+
+int vector_pow(int vector [NUM_MOVIES])
+{
+  int sum = 0;
+  int i;
+  for ( i = 0; i < NUM_MOVIES; ++i )
+  {
+    sum += (vector[i] * vector[i]);
+  }
+  return sum;
+}
+
+void fill_user_logs(FILE *file)
+{
+  char *line = NULL;
+  size_t len = 0;
+  ssize_t read;
+  char *rate_array = NULL;
+  char *token = NULL;
+  int m = 0;
+  int n;
+  while ((read = getline(&line, &len, file)) != -1) {
+    for ( n = 0; ; line = NULL, ++n ) {
+      token = strtok_r(line, " ", &rate_array);
+      if ( token == NULL ){
+        break;
+      }
+      matrix_user_log[m][n] = atoi(token);
+    }
+    ++m;
+  }
+
+  if (line){
+    free(line);
+  }
+  print_matrix();
+}
+
+double pearson(int user1 [NUM_MOVIES], int user2 [NUM_MOVIES])
+{
+  int i;
+  int sumX, sumY, sumXPow, sumYPow, sumProd;
+  int product[NUM_MOVIES];
+
+  sumX = vector_sum(user1);
+  sumY = vector_sum(user2);
+  sumXPow = vector_pow(user1);
+  sumYPow = vector_pow(user2);
+
+  for ( i = 0; i < NUM_MOVIES; ++i )
+  {
+    product[i] = user1[i]*user2[i];
+  }
+
+  sumProd = vector_sum(product);
+
+  double res = sumProd - ( sumX * sumY / (double) NUM_MOVIES );
+  double den = pow(
+    ( (double) ( sumXPow - ( sumX * sumX ) / (double) NUM_MOVIES ) *
+    ( sumYPow - ( sumY * sumY ) / (double) NUM_MOVIES ) ), 0.5 );
+  if ( den == 0.0 ) { return 0;}
+  return res / den;
+}
+
+int main(int argc, char const *argv[])
+{
+  FILE *user_log = fopen( "usuarios-peliculas.txt", "r" );
+
+  if (user_log == NULL)
+  {
+    fprintf(stderr, "%s\n", "Error abriendo usuarios-peliculas.txt");
+    exit(EXIT_FAILURE);
+  }
+
+  fill_user_logs(user_log);
+
+  int i, j;
+  for ( i = 0; i < NUM_USERS; ++i )
+  {
+    for ( j = 0; j < NUM_USERS; ++j )
+    {
+      matrix_corr[i][j] = pearson(matrix_user_log[i], matrix_user_log[j]);
+    }
+  }
+  printf("Matrix Correlacion:\n");
+  print_matrix_corr();
+  return 0;
+}
