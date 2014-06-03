@@ -6,12 +6,51 @@
 #define NUM_USERS 10
 #define My NUM_USERS
 #define NUM_MOVIES 10
+#define m 5 
+
 
 // ruby fill logs with random numbers
 // 10.times { 10.times { print "#{rand.rand 5} " } ; puts "" }
 
 int matrix_user_log[NUM_USERS][NUM_MOVIES];
 double matrix_corr[My][My];
+int matrix_recom[My][m];
+
+void generate_matrix_recom(){
+  int i;
+  int j;
+  int k;
+  for ( i = 0; i < NUM_USERS; ++i ){
+    for ( j = 0; j < m; ++j ){
+      double maximum = -2;
+      int maximum_index;
+      for(k = 0;k < NUM_USERS; k++){
+        if(matrix_corr[i][k] > maximum && i != k){
+          maximum = matrix_corr[i][k];
+          maximum_index = k;
+        }
+      }
+      matrix_recom[i][j] = maximum_index;
+      matrix_corr[i][maximum_index] = 0;
+      //printf("el mayor índice fue %f del usuario %d\n",maximum,maximum_index);
+    }
+    //printf("--------------"); 
+  }
+}
+
+void print_matrix_recom()
+{
+  int i;
+  int j;
+  for ( i = 0; i < NUM_USERS; ++i )
+  {
+    for ( j = 0; j < m; ++j )
+    {
+      printf("%d ", matrix_recom[i][j]);
+    }
+    printf("\n");
+  }
+}
 
 
 void print_matrix()
@@ -71,7 +110,7 @@ void fill_user_logs(FILE *file)
   ssize_t read;
   char *rate_array = NULL;
   char *token = NULL;
-  int m = 0;
+  int rows = 0;
   int n;
   while ((read = getline(&line, &len, file)) != -1) {
     for ( n = 0; ; line = NULL, ++n ) {
@@ -79,9 +118,9 @@ void fill_user_logs(FILE *file)
       if ( token == NULL ){
         break;
       }
-      matrix_user_log[m][n] = atoi(token);
+      matrix_user_log[rows][n] = atoi(token);
     }
-    ++m;
+    ++rows;
   }
 
   if (line){
@@ -138,5 +177,9 @@ int main(int argc, char const *argv[])
   }
   printf("Matrix Correlacion:\n");
   print_matrix_corr();
+
+  generate_matrix_recom();
+  print_matrix_recom();
+
   return 0;
 }
