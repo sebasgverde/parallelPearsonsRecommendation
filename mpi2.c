@@ -41,16 +41,21 @@ void initMPI(int argc, char **argv) {
         MPI_Comm_size(MPI_COMM_WORLD, &numTasks);
         numWorkers = numTasks-1;
 }
-void sendRows() {
-  int count = F_x;
+void sendMatrixRanking() {
+  int count = NUM_MOVIES * NUM_USERS;
   int index;
   int i;
   int w;
-  for (i=0;i<F_x;i++) {
+  for (i=0;i<numWorkers;i++) {
         w = nextWorker();
         //printf("Send-index=%d a %d\n",i,w);
+    MPI_Send(&matrix_user_log[0][0], count, MPI_INT, w, FROM_MASTER, MPI_COMM_WORLD);
+  }
+    //empiezo a rotar los usuarios con sus indices
+  for (i=0;i<NUM_USERS;i++) {
+    w = nextWorker();
     MPI_Send(&i, 1, MPI_INT, w, FROM_MASTER, MPI_COMM_WORLD);
-    MPI_Send(&Fj[i][0], count, MPI_INT, w, FROM_MASTER, MPI_COMM_WORLD);
+	        //printf("Send-index=%d a %d\n",i,w);
   }
   //printf("finalizando...\n");
   int fin=-1;
@@ -59,29 +64,6 @@ void sendRows() {
         MPI_Send(&fin, 1, MPI_INT, w, FROM_MASTER, MPI_COMM_WORLD);
         //printf("finalizando el worker %d\n", w);
   }
-}
-
-void recvRows() {
-  int count = F_x;
-  int index = 0;
-  int result;
-  while (index != -1) {
-        MPI_Recv(&index, 1, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD,&status);
-        if (index != -1) {
-                MPI_Recv(&Fi[index][0], count, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD,&status);
-                result = processRow(index);
-                MPI_Send(&index, 1, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD);
-                MPI_Send(&result, 1, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD);
-                //printf("recvRows(task=%d) index=%d result=%d\n", taskId,index,result);
-        }
-  }
-}
-int processRow(int index) {
-        int i;
-        int result = 0;
-        for (i=0;i<F_x;i++)
-                result = result + Fi[index][i];
-        return result;
 }
 
 int DoSequencial() {
@@ -96,21 +78,6 @@ int nextWorker() {
                 currentWorker = 0;
         currentWorker++;
         return currentWorker;
-}
-
-void recvResults() {
-  int count = F_x;
-  int i, index,w;
-  currentWorker=0;
-  for (i=0;i<F_x;i++) {
-        w = nextWorker();
-        //printf("recvResults(%d) waiting data from %d\n", taskId,w);
-    MPI_Recv(&index, 1, MPI_INT, w, FROM_MASTER, MPI_COMM_WORLD, &status);
-        if (index != -1) {
-                MPI_Recv(&vec_sum[index], 1, MPI_INT, w, FROM_MASTER, MPI_COMM_WORLD,&status);
-                printf("recvResults(%d) index=%d row-sum=%d\n", taskId,index,vec_sum[index]);
-        }
-  }
 }
 
 void generate_matrix_recom_row(int i){
@@ -276,6 +243,49 @@ void recommend_movies(int user){
   }
 }
 
+void recvMatrixRanking() {
+  int count = NUM_MOVIES * NUM_USERS;;
+  int index = 0;
+  int result;
+  
+	MPI_Recv(&matrix_user_log[0][0], count, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD,&status);
+	
+	  while (index != -1) {
+        MPI_Recv(&index, 1, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD,&status);
+		count = NUM_USERS;
+        if (index != -1) {
+                processRow(index);
+				//printf("termino procesamiento en %d\n", taskId);
+				MPI_Send(&index, 1, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD);
+                MPI_Send(&matrix_corr[index][0], count, MPI_DOUBLE, MASTER, FROM_MASTER, MPI_COMM_WORLD);			
+                //printf("enviados los resultados (task=%d) index=%d ind=%f match=%f\n\n", taskId,index, referencia[index][0], referencia[index][1]);
+        }
+  }
+	//result = processRow(index);
+}
+int processRow(int index) {
+    int j;
+    for ( j = 0; j < NUM_USERS; ++j )
+    {
+      matrix_corr[index][j] = pearson(matrix_user_log[index], matrix_user_log[j]);
+    }
+}
+
+void recvResultsCorrelation() {
+  int count = NUM_USERS;
+  int i, index,w;
+  currentWorker=0;
+  for (i=0;i<count;i++) {
+        w = nextWorker();
+        //printf("recvResults(%d) waiting data from %d\n", taskId,w);
+    MPI_Recv(&index, 1, MPI_INT, w, FROM_MASTER, MPI_COMM_WORLD, &status);
+        if (index != -1) {
+                MPI_Recv(&matrix_corr[index][0], count, MPI_DOUBLE, w, FROM_MASTER, MPI_COMM_WORLD,&status);
+                printf("recvResults(%d) index=%d row-sum=%f\n", taskId,index,matrix_corr[index][0]);
+        }
+  }
+}
+
 void fillMatrix() {
         int i,j;
         int val_i, val_j;
@@ -292,7 +302,8 @@ void fillMatrix() {
  void main(int argc, char **argv) {
         initMPI(argc, argv);
 		
-		  printf("Matriz tomada desde el fichero de texto:\n");
+		if (taskId == MASTER) {
+				printf("Matriz tomada desde el fichero de texto:\n");
   FILE *user_log = fopen( "usuarios-peliculas.txt", "r" );
 
   if (user_log == NULL)
@@ -304,6 +315,13 @@ void fillMatrix() {
   fill_user_logs(user_log);
   fclose(user_log);
   
+  sendMatrixRanking();
+  recvResultsCorrelation();
+  
+    printf("Matriz de Correlacion:\n");
+  print_matrix_corr();
+  
+  /*
     int i, j;
   for ( i = 0; i < NUM_USERS; ++i )
   {
@@ -329,7 +347,13 @@ void fillMatrix() {
 
   printf("recomendaciones para el usuario%d:\n",user);
 
-  recommend_movies(user);
+  recommend_movies(user);*/
+        } else {
+		recvMatrixRanking();
+		printf("recibida matriz");
+		print_matrix();
+        }
+		
   
        /*
 	   start = MPI_Wtime();
