@@ -7,6 +7,7 @@
 #define My NUM_USERS
 #define NUM_MOVIES 10
 #define m 5 
+#define p 3
 
 
 // ruby fill logs with random numbers
@@ -155,8 +156,36 @@ double pearson(int user1 [NUM_MOVIES], int user2 [NUM_MOVIES])
   return res / den;
 }
 
+int get_user_highest_rated_movie(int user){
+  int i;
+  int maximum = -1;
+  int maximum_index = 0;
+  //printf("User:%d\n",user );
+  for(i=0;i<NUM_MOVIES;i++){
+    //printf("%d\n",matrix_user_log[user][i]);
+    if(matrix_user_log[user][i] > maximum){
+      maximum = matrix_user_log[user][i];
+      maximum_index = i;
+    }
+  }
+  return maximum_index;
+  
+  //printf("la película favorita de %d es %d\n",user,maximum);
+}
+
+void recommend_movies(int user){
+  int i;
+  int reco_movie;
+  //get most similar users highest rated movies
+  for(i=0 ; i<m ; i++){
+    reco_movie = get_user_highest_rated_movie(matrix_recom[user][i]);
+    printf("%d\n",reco_movie);
+  }
+}
+
 int main(int argc, char const *argv[])
 {
+  printf("Matriz tomada desde el fichero de texto:\n");
   FILE *user_log = fopen( "usuarios-peliculas.txt", "r" );
 
   if (user_log == NULL)
@@ -175,11 +204,20 @@ int main(int argc, char const *argv[])
       matrix_corr[i][j] = pearson(matrix_user_log[i], matrix_user_log[j]);
     }
   }
-  printf("Matrix Correlacion:\n");
+  printf("Matriz de Correlacion:\n");
   print_matrix_corr();
 
   generate_matrix_recom();
+  printf("Matriz de recomendación:\n");
   print_matrix_recom();
+
+  //recomend movies to a specific user
+  int user = rand() % 10;
+
+  printf("recomendaciones para el usuario%d:\n",user);
+
+  recommend_movies(user);
+
 
   return 0;
 }
