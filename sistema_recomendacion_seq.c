@@ -31,7 +31,7 @@ void generate_matrix_recom(){
         }
       }
       matrix_recom[i][j] = maximum_index;
-      matrix_corr[i][maximum_index] = 0;
+      matrix_corr[i][maximum_index] = -2;
       //printf("el mayor índice fue %f del usuario %d\n",maximum,maximum_index);
     }
     //printf("--------------"); 
