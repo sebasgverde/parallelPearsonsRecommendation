@@ -14,12 +14,6 @@
 #define NUM_MOVIES 1000
 #define m 5
 
- #define F_x 640
- #define F_y 480
-
- int vec_sum[F_x];
- int Fi[F_x][F_y];
- int Fj[F_x][F_y];
 
  int matrix_user_log[NUM_USERS][NUM_MOVIES];
 double matrix_corr[My][My];
@@ -64,13 +58,6 @@ void sendMatrixRanking() {
         MPI_Send(&fin, 1, MPI_INT, w, FROM_MASTER, MPI_COMM_WORLD);
         //printf("finalizando el worker %d\n", w);
   }
-}
-
-int DoSequencial() {
-int i;
-        for (i=0;i<F_x;i++) {
-                vec_sum[i] = processRow(i);
-        }
 }
 
 int nextWorker() {
@@ -290,68 +277,44 @@ void recvResultsCorrelation() {
   }
 }
 
-void fillMatrix() {
-        int i,j;
-        int val_i, val_j;
-        int prob;
-        for (i=0;i<F_x;i++)
-                for (j=0;j<F_y;j++) {
-                        val_i = rand()%256;
-                        val_j = rand()%256;
-                        Fi[i][j] = val_i;
-                        Fj[i][j] = val_j;
-                }
- }
  double start;
  void main(int argc, char **argv) {
         initMPI(argc, argv);
 		start = MPI_Wtime();
 		if (taskId == MASTER) {
-				printf("Matriz tomada desde el fichero de texto:\n");
-  FILE *user_log = fopen( "usuarios-peliculas.txt", "r" );
+			printf("Matriz tomada desde el fichero de texto:\n");
+			FILE *user_log = fopen( "usuarios-peliculas.txt", "r" );
 
-  if (user_log == NULL)
-  {
-    fprintf(stderr, "%s\n", "Error abriendo usuarios-peliculas.txt");
-    exit(EXIT_FAILURE);
-  }
+			if (user_log == NULL)
+			{
+				fprintf(stderr, "%s\n", "Error abriendo usuarios-peliculas.txt");
+				exit(EXIT_FAILURE);
+			}
 
-  fill_user_logs(user_log);
-  fclose(user_log);
-  
-  sendMatrixRanking();
-  recvResultsCorrelation();
-  
-    printf("Matriz de Correlacion:\n");
-  //print_matrix_corr();
-  
-    printf("Matriz de recomendación:\n");
- // print_matrix_recom();
-  
-    //recomend movies to a specific user
-  int user = rand() % 10;
+			fill_user_logs(user_log);
+			fclose(user_log);
 
-  printf("recomendaciones para el usuario %d:\n",user);
+			sendMatrixRanking();
+			recvResultsCorrelation();
 
-  recommend_movies(user);
-  
-  printf("Processing time: %lf\n", MPI_Wtime()-start);
+			printf("Matriz de Correlacion:\n");
+			//print_matrix_corr();
+
+			printf("Matriz de recomendación:\n");
+			 //print_matrix_recom();
+
+			//recomend movies to a specific user
+			int user = rand() % 10;
+
+			printf("recomendaciones para el usuario %d:\n",user);
+			recommend_movies(user);
+
+			printf("Processing time: %lf\n", MPI_Wtime()-start);
         } else {
-		recvMatrixRanking();
-		//printf("recibida matriz");
-		//print_matrix();
+			recvMatrixRanking();
+			//printf("recibida matriz");
+			//print_matrix();
         }
-		
-  
-       /*
-	   start = MPI_Wtime();
-        if (taskId == MASTER) {
-                fillMatrix();
-                sendRows();
-                recvResults();
-                printf("Processing time: %lf\n", MPI_Wtime()-start);
-        } else {
-                recvRows();
-        }*/
+	
         MPI_Finalize();
  }

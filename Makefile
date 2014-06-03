@@ -1,8 +1,14 @@
 LDFLAGS=
 
 all:
-	mpicc mpi2.c -lm -o sr2
+	mpicc sistRecom.c -lm -o sisre
+	
+compSec:
+	mpicc sistRecomSec.c -lm -o sisre
+	
+run:
+	mpirun -np 4 sisre
 
 clean:
-	rm -f *.o *.C~ Makefile~ sr2
+	rm -f *.o *.C~ Makefile~ sisre
 
