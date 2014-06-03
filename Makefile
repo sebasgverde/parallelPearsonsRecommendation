@@ -1,8 +1,8 @@
 LDFLAGS=
 
 all:
-	cc sistema_recomendacion_seq.c -lm -o sr
+	mpicc mpi2.c -lm -o sr2
 
 clean:
-	rm -f *.o *.C~ Makefile~
+	rm -f *.o *.C~ Makefile~ sr2
 
