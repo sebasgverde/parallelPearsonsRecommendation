@@ -17,12 +17,10 @@ int matrix_user_log[NUM_USERS][NUM_MOVIES];
 double matrix_corr[My][My];
 int matrix_recom[My][m];
 
-void generate_matrix_recom(){
-  int i;
+void generate_matrix_recom_row(int i){
   int j;
   int k;
-  for ( i = 0; i < NUM_USERS; ++i ){
-    for ( j = 0; j < m; ++j ){
+  for ( j = 0; j < m; ++j ){
       double maximum = -2;
       int maximum_index;
       for(k = 0;k < NUM_USERS; k++){
@@ -35,8 +33,6 @@ void generate_matrix_recom(){
       matrix_corr[i][maximum_index] = -2;
       //printf("el mayor índice fue %f del usuario %d\n",maximum,maximum_index);
     }
-    //printf("--------------"); 
-  }
 }
 
 void print_matrix_recom()
@@ -207,7 +203,12 @@ int main(int argc, char const *argv[])
   printf("Matriz de Correlacion:\n");
   print_matrix_corr();
 
-  generate_matrix_recom();
+  //generate_matrix_recom();
+  for ( i = 0; i < NUM_USERS; ++i )
+  {
+    generate_matrix_recom_row(i);
+  }
+
   printf("Matriz de recomendación:\n");
   print_matrix_recom();
 
