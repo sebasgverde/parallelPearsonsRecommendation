@@ -166,7 +166,7 @@ int main(int argc, char const *argv[])
   }
 
   fill_user_logs(user_log);
-
+  fclose(user_log);
   int i, j;
   for ( i = 0; i < NUM_USERS; ++i )
   {
