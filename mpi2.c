@@ -9,10 +9,10 @@
 #define FROM_MASTER 1
 #define FROM_WORKER 2
 
-#define NUM_USERS 10
+#define NUM_USERS 1000
 #define My NUM_USERS
-#define NUM_MOVIES 10
-#define m 5 
+#define NUM_MOVIES 1000
+#define m 5
 
  #define F_x 640
  #define F_y 480
@@ -186,7 +186,7 @@ void fill_user_logs(FILE *file)
   if (line){
     free(line);
   }
-  print_matrix();
+  //print_matrix();
 }
 
 
@@ -257,7 +257,9 @@ void recvMatrixRanking() {
                 processRow(index);
 				//printf("termino procesamiento en %d\n", taskId);
 				MPI_Send(&index, 1, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD);
-                MPI_Send(&matrix_corr[index][0], count, MPI_DOUBLE, MASTER, FROM_MASTER, MPI_COMM_WORLD);			
+                MPI_Send(&matrix_corr[index][0], count, MPI_DOUBLE, MASTER, FROM_MASTER, MPI_COMM_WORLD);	
+				generate_matrix_recom_row(index);
+				MPI_Send(&matrix_recom[index][0], m, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD);
                 //printf("enviados los resultados (task=%d) index=%d ind=%f match=%f\n\n", taskId,index, referencia[index][0], referencia[index][1]);
         }
   }
@@ -281,7 +283,9 @@ void recvResultsCorrelation() {
     MPI_Recv(&index, 1, MPI_INT, w, FROM_MASTER, MPI_COMM_WORLD, &status);
         if (index != -1) {
                 MPI_Recv(&matrix_corr[index][0], count, MPI_DOUBLE, w, FROM_MASTER, MPI_COMM_WORLD,&status);
-                printf("recvResults(%d) index=%d row-sum=%f\n", taskId,index,matrix_corr[index][0]);
+                //printf("recvResults(%d) index=%d correlation=%f\n", taskId,index,matrix_corr[index][0]);
+				MPI_Recv(&matrix_recom[index][0], m, MPI_INT, w, FROM_MASTER, MPI_COMM_WORLD,&status);
+				//printf("recvResults(%d) index=%d recomen=%d\n", taskId,index,matrix_recom[index][0]);
         }
   }
 }
@@ -301,7 +305,7 @@ void fillMatrix() {
  double start;
  void main(int argc, char **argv) {
         initMPI(argc, argv);
-		
+		start = MPI_Wtime();
 		if (taskId == MASTER) {
 				printf("Matriz tomada desde el fichero de texto:\n");
   FILE *user_log = fopen( "usuarios-peliculas.txt", "r" );
@@ -319,39 +323,23 @@ void fillMatrix() {
   recvResultsCorrelation();
   
     printf("Matriz de Correlacion:\n");
-  print_matrix_corr();
+  //print_matrix_corr();
   
-  /*
-    int i, j;
-  for ( i = 0; i < NUM_USERS; ++i )
-  {
-    for ( j = 0; j < NUM_USERS; ++j )
-    {
-      matrix_corr[i][j] = pearson(matrix_user_log[i], matrix_user_log[j]);
-    }
-  }
-  printf("Matriz de Correlacion:\n");
-  print_matrix_corr();
+    printf("Matriz de recomendación:\n");
+ // print_matrix_recom();
   
-    //generate_matrix_recom();
-  for ( i = 0; i < NUM_USERS; ++i )
-  {
-    generate_matrix_recom_row(i);
-  }
-
-  printf("Matriz de recomendación:\n");
-  print_matrix_recom();
-
-  //recomend movies to a specific user
+    //recomend movies to a specific user
   int user = rand() % 10;
 
-  printf("recomendaciones para el usuario%d:\n",user);
+  printf("recomendaciones para el usuario %d:\n",user);
 
-  recommend_movies(user);*/
+  recommend_movies(user);
+  
+  printf("Processing time: %lf\n", MPI_Wtime()-start);
         } else {
 		recvMatrixRanking();
-		printf("recibida matriz");
-		print_matrix();
+		//printf("recibida matriz");
+		//print_matrix();
         }
 		
   
